@@ -296,11 +296,18 @@
         L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
 
         // ฟังก์ชันสร้าง Marker พร้อม Popup
-       function loadMarkers() {
+    function loadMarkers() {
+    // ล้างมาร์เกอร์เดิมก่อน (ถ้ามี)
+    map.eachLayer((layer) => {
+        if (layer instanceof L.Marker) {
+            map.removeLayer(layer);
+        }
+    });
+
     schools.forEach(school => {
         L.marker([school.lat, school.lng])
          .addTo(map)
-         .bindPopup("<b>" + school.name + "</b><br>สังกัด: " + school.district); // แสดงชื่อและอำเภอ
+         .bindPopup(`<b>${school.name}</b><br>อ.${school.district}<br>ประเภท: ${school.type || 'ไม่ระบุ'}`);
     });
 }
 
@@ -317,13 +324,17 @@
         }
 
         let routingControl;
- function calculateRoute() {
+function calculateRoute() {
     const selects = document.querySelectorAll('.point-select');
-    const waypoints = Array.from(selects).map(s => {
+    const waypoints = [];
+    
+    selects.forEach(s => {
         const coords = s.value.split(',');
-        const lat = parseFloat(coords[0].trim());
-        const lng = parseFloat(coords[1].trim());
-        return L.latLng(lat, lng);
+        const lat = parseFloat(coords[0]);
+        const lng = parseFloat(coords[1]);
+        if (!isNaN(lat) && !isNaN(lng)) {
+            waypoints.push(L.latLng(lat, lng));
+        }
     });
 
     if (waypoints.length < 2) {
@@ -338,19 +349,13 @@
     routingControl = L.Routing.control({
         waypoints: waypoints,
         routeWhileDragging: true,
-        // ใช้ Router พื้นฐานของ Leaflet Routing Machine ที่จัดการ OSRM ให้เอง
+        // ใช้ Router ที่รองรับ HTTPS ให้สมบูรณ์ขึ้น
         router: L.Routing.osrmv1({
             serviceUrl: 'https://router.project-osrm.org/route/v1',
             profile: 'driving'
         }),
         language: 'th'
     }).addTo(map);
-
-    // แก้ไขปัญหาถ้าเส้นทางไม่ยอมโหลด ให้สั่งให้มันลองคำนวณใหม่
-    routingControl.on('routingerror', function(e) {
-        console.error("เกิดข้อผิดพลาดในการคำนวณเส้นทาง:", e);
-        alert("ขออภัย ระบบคำนวณเส้นทางไม่ได้ในขณะนี้ (อาจเป็นเพราะ OSRM Demo Server ปฏิเสธการเชื่อมต่อ)");
-    });
 }
 // อย่าลืมเรียกใช้ฟังก์ชันโหลดมาร์เกอร์เพื่อให้แผนที่แสดงโรงเรียนตั้งแต่ตอนเริ่ม
 loadMarkers();
