@@ -317,12 +317,13 @@
         }
 
         let routingControl;
-   function calculateRoute() {
+ function calculateRoute() {
     const selects = document.querySelectorAll('.point-select');
-    // ดึงค่าจุดแวะ (waypoints)
     const waypoints = Array.from(selects).map(s => {
-        const [lat, lng] = s.value.split(',');
-        return L.latLng(parseFloat(lat), parseFloat(lng));
+        const coords = s.value.split(',');
+        const lat = parseFloat(coords[0].trim());
+        const lng = parseFloat(coords[1].trim());
+        return L.latLng(lat, lng);
     });
 
     if (waypoints.length < 2) {
@@ -330,23 +331,27 @@
         return;
     }
 
-    // ลบเส้นทางเก่าทิ้งก่อนเริ่มคำนวณใหม่
     if (routingControl) {
         map.removeControl(routingControl);
     }
 
-    // ตั้งค่า Routing Control
     routingControl = L.Routing.control({
         waypoints: waypoints,
         routeWhileDragging: true,
-        // สำคัญ: ต้องระบุ router เพื่อเชื่อมต่อกับ API ของ OSRM
+        // ใช้ Router พื้นฐานของ Leaflet Routing Machine ที่จัดการ OSRM ให้เอง
         router: L.Routing.osrmv1({
-            serviceUrl: 'https://router.project-osrm.org/route/v1'
+            serviceUrl: 'https://router.project-osrm.org/route/v1',
+            profile: 'driving'
         }),
         language: 'th'
     }).addTo(map);
-}
 
+    // แก้ไขปัญหาถ้าเส้นทางไม่ยอมโหลด ให้สั่งให้มันลองคำนวณใหม่
+    routingControl.on('routingerror', function(e) {
+        console.error("เกิดข้อผิดพลาดในการคำนวณเส้นทาง:", e);
+        alert("ขออภัย ระบบคำนวณเส้นทางไม่ได้ในขณะนี้ (อาจเป็นเพราะ OSRM Demo Server ปฏิเสธการเชื่อมต่อ)");
+    });
+}
 // อย่าลืมเรียกใช้ฟังก์ชันโหลดมาร์เกอร์เพื่อให้แผนที่แสดงโรงเรียนตั้งแต่ตอนเริ่ม
 loadMarkers();
     </script>
